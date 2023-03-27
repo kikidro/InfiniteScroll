@@ -8,59 +8,69 @@
 <script>
 import InfiniteScroll from "@/components/InfiniteScroll.vue";
 import axios from "axios";
-
+import {
+  onBeforeMount,
+  onMounted,
+  // onBeforeUpdate,
+  // onUpdated,
+  onUnmounted,
+  ref
+} from "vue";
 export default {
   name: "App",
   components: {
     InfiniteScroll: InfiniteScroll
   },
-  data() {
-    return {
-      page: 1,
-      items: [],
-      skip: 0,
-      loading: false,
-      windowWidth: 0,
-      windowHeight: 0
-    };
-  },
-  methods: {
-    async scrollYTrigger() {
+  setup() {
+    let skip = ref(0);
+    let items = ref([]);
+    let loading = ref(false);
+    const scrollYTrigger = () => {
+      // console.log(e);
       try {
         const { scrollY } = window;
-        if (scrollY + window.screen.height >= document.body.scrollHeight && this.loading === false) {
-          this.skip += 6;
-          await this.fetchMore();
+        if (
+          scrollY + window.screen.height >= document.body.scrollHeight &&
+          loading.value === false
+        ) {
+          skip.value += 6;
+          fetchData();
         }
       } catch (err) {
         console.log(err);
       }
-    },
-    async fetchMore() {
-      try {
-        this.loading = true;
-        const res = await axios.get(
-          `https://dummyjson.com/users?limit=6&skip=${this.skip}`
-        );
-        this.items = this.items.concat(res.data.users);
-        this.loading = false;
-        return true;
-      } catch (err) {
-        console.log(err);
-      }
-    }
+    };
+
+    const fetchData = () => {
+      loading.value = true;
+      axios
+        .get(`https://dummyjson.com/users?limit=6&skip=${skip.value}`)
+        .then(res => {
+          console.log(res.data.users);
+          items.value = items.value.concat(res.data.users);
+          loading.value = false;
+        });
+    };
+    onBeforeMount(() => {
+      fetchData()
+    });
+
+    onMounted(() => {
+      window.addEventListener("scroll", scrollYTrigger);
+    });
+
+    // 等同於 Vue2 的 destroyed
+    onUnmounted(() => {
+      window.removeEventListener("scroll", scrollYTrigger);
+    });
+
+    return {
+      items,
+      loading,
+      skip,
+      fetchData
+    };
   },
-  beforeUnmount() {
-    window.removeEventListener("scroll", this.scrollYTrigger);
-  },
-  async mounted() {
-    try {
-      window.addEventListener("scroll", this.scrollYTrigger);
-      await this.fetchMore();
-    } catch (err) {
-      console.log(err);
-    }
-  }
 };
 </script>
 
